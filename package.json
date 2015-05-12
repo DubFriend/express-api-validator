@@ -1,6 +1,6 @@
 {
-  "name": "connect-request-validator",
-  "version": "1.0.0",
+  "name": "express-api-validator",
+  "version": "0.1.0",
   "description": "Middleware to declaritively validate requests",
   "main": "index.js",
   "scripts": {
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/DubFriend/connect-request-validator.git"
+    "url": "https://github.com/DubFriend/express-api-validator.git"
   },
   "keywords": [
     "express",
@@ -23,9 +23,9 @@
   "author": "Brian Detering",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/DubFriend/connect-request-validator/issues"
+    "url": "https://github.com/DubFriend/express-api-validator/issues"
   },
-  "homepage": "https://github.com/DubFriend/connect-request-validator",
+  "homepage": "https://github.com/DubFriend/express-api-validator",
   "devDependencies": {
     "body-parser": "^1.12.4",
     "express": "^4.12.3",

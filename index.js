@@ -1,14 +1,6 @@
 var _ = require('underscore');
 var theValidator = require('the_validator');
 
-// var mapObject = function (o, callback) {
-// 	var mapped = {};
-// 	_.each(o, function (val, key) {
-// 		mapped[key] = callback(val, key, o);
-// 	});
-// 	return mapped;
-// };
-
 module.exports = function (fig) {
 	fig = fig || {};
 
