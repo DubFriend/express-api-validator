@@ -4,15 +4,15 @@ var theValidator = require('the_validator');
 module.exports = function (fig) {
 	fig = fig || {};
 
-	var validateBody = function (properties, body) {
-		body = body || {};
+	var validateGroup = function (properties, data) {
+		data = data || {};
 		var errors = {};
 
 		_.each(properties, function (property, name) {
 			var err = {};
 
 			if(property.properties) {
-				err = validateBody(property.properties, body[name]);
+				err = validateGroup(property.properties, data[name]);
 				if(!_.isEmpty(err)) {
 					errors[name] = err;
 				}
@@ -22,7 +22,7 @@ module.exports = function (fig) {
 				validationSchema[name] = property.validators;
 
 				var testValue = {};
-				testValue[name] = body[name];
+				testValue[name] = data[name];
 
 				err = theValidator(validationSchema)
 					.test(testValue);
@@ -31,26 +31,17 @@ module.exports = function (fig) {
 					errors[name] = err[name];
 				}
 			}
-
-			return err;
 		});
 
 		return errors;
 	};
 
-	var validateParams = function (properties, params) {
-
-	};
-
-	var validateQuery = function (properties, query) {
-
-	};
-
 	var validate = function (schema, req) {
 		var errors = {};
-		var bodyErrors = validateBody(schema.body, req.body);
-		var paramsErrors = validateParams(schema.params, req.params);
-		var queryErrors = validateParams(schema.query, req.query);
+
+		var bodyErrors = validateGroup(schema.body, req.body);
+		var queryErrors = validateGroup(schema.query, req.query);
+		var paramsErrors = validateGroup(schema.params, req.params);
 
 		if(!_.isEmpty(bodyErrors)) {
 			errors.body = bodyErrors;

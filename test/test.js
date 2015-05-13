@@ -7,38 +7,49 @@ var Q = require('q');
 
 app.use(bodyParser.json());
 
-app.post('/basic', requestValidator({
-        body: {
-            name: {
-                validators: ['required', 'minimumLength:3']
-            }
+var routeBasic = function (method, groupName) {
+    var fig = {};
+    fig[groupName] = {
+        name: {
+            validators: ['required', 'minimumLength:3']
         }
-    }),
-    function (req, res, next) {
-        res.json({ success: true });
-    }
-);
+    };
 
-app.post(
-    '/nested-body',
-    requestValidator({
-        body: {
-            object: {
-                properties: {
-                    name: {
-                        validators: ['required', 'minimumLength:3']
-                    }
+    app[method]('/' + groupName, requestValidator(fig), function (req, res, next) {
+        res.json({ success: true });
+    });
+};
+
+routeBasic('post', 'body');
+routeBasic('get', 'query');
+
+var routeNested = function (method, groupName) {
+    var fig = {};
+    fig[groupName] = {
+        object: {
+            properties: {
+                name: {
+                    validators: ['required', 'minimumLength:3']
                 }
             }
         }
-    }),
-    function (req, res, next) {
-        res.json({ success: true })
-    }
-);
+    };
+
+    app[method](
+        '/nested-' + groupName,
+        requestValidator(fig),
+        function (req, res, next) {
+            res.json({ success: true });
+        }
+    );
+};
+
+routeNested('post', 'body');
+routeNested('get', 'query');
 
 var createWrappedRequestMethod = function (method) {
     return function (url, fig) {
+        fig = fig || {};
         return Q.Promise(function (resolve, reject, notify) {
             request[method](
                 _.extend({
@@ -64,6 +75,125 @@ var post = createWrappedRequestMethod('post');
 var del = createWrappedRequestMethod('del');
 
 var isConnected = false;
+
+var testSuccessBasic = function (promise, test) {
+    test.expect(2);
+    promise.then(function (res) {
+        test.strictEqual(res.statusCode, 200, 'status code is "200"');
+        test.strictEqual(
+            res.body.success, true,
+            'success response body'
+        );
+        test.done();
+    })
+    .done();
+};
+
+var testSuccessNested = function (promise, test) {
+    test.expect(2);
+    promise.then(function (res) {
+        test.strictEqual(res.statusCode, 200, 'status code is "200"');
+        test.strictEqual(
+            res.body.success, true,
+            'success response body'
+        );
+        test.done();
+    })
+    .done();
+};
+
+var testFailureBasicDataInvalid = function (groupName, promise, test) {
+    test.expect(2);
+    var expectedErrors = {
+        errors: {}
+    };
+    expectedErrors.errors[groupName] = {
+        name: ['Name must be at least 3 characters long']
+    };
+    promise.then(function (res) {
+        test.strictEqual(res.statusCode, 400, 'status code is "400"');
+        test.deepEqual(
+            res.body,
+            expectedErrors,
+            'response body contains errors'
+        );
+        test.done();
+    })
+    .done();
+};
+
+var testFailureNestedDataInvalid = function (groupName, promise, test) {
+    test.expect(2);
+    var expectedErrors = {
+        errors: {}
+    };
+    expectedErrors.errors[groupName] = {
+        object: {
+            name: ['Name must be at least 3 characters long']
+        }
+    };
+
+    promise.then(function (res) {
+        test.strictEqual(res.statusCode, 400, 'status code is "400"');
+        test.deepEqual(
+            res.body,
+            expectedErrors,
+            'response body contains error messages'
+        );
+        test.done();
+    })
+    .done();
+};
+
+var testFailureBasicDataAbsent = function (groupName, promise, test) {
+    test.expect(2);
+    var expectedErrors = {
+        errors: {}
+    };
+    expectedErrors.errors[groupName] = {
+        name: [
+            'Name is required',
+            'Name must be at least 3 characters long'
+        ]
+    };
+    promise.then(function (res) {
+        test.strictEqual(res.statusCode, 400, 'status code is "400"');
+        test.deepEqual(
+            res.body,
+            expectedErrors,
+            'response body contains errors'
+        );
+        test.done();
+    })
+    .done();
+};
+
+var testFailureNestedDataAbsent = function (groupName, promise, test) {
+    test.expect(2);
+    var expectedErrors = {
+        errors: {}
+    };
+    expectedErrors.errors[groupName] = {
+        object: {
+            name: [
+                'Name is required',
+                'Name must be at least 3 characters long'
+            ]
+        }
+    };
+
+    promise.then(function (res) {
+        test.strictEqual(res.statusCode, 400, 'status code is "400"');
+        test.deepEqual(
+            res.body,
+            expectedErrors,
+            'response body contains error messages'
+        );
+        test.done();
+    })
+    .done();
+};
+
 module.exports = {
 
     setUp: function (done) {
@@ -78,138 +208,75 @@ module.exports = {
         }
     },
 
-    postSuccess: function (test) {
-        test.expect(2);
-        post('/basic', {
-            body: {
-                name: 'foo'
-            }
-        })
-        .then(function (res) {
-            test.strictEqual(res.statusCode, 200, 'status code is "200"');
-            test.strictEqual(
-                res.body.success, true,
-                'success response body'
-            );
-            test.done();
-        })
-        .done();
-    },
+    bodyBasicSuccess: _.partial(testSuccessBasic, post('/body', {
+        body: { name: 'foo' }
+    })),
 
-    postValidatorsFailureBodyParameterInvalid: function (test) {
-        test.expect(2);
-        post('/basic', {
-            body: {
-                name: 'fo'
-            }
-        })
-        .then(function (res) {
-            test.strictEqual(res.statusCode, 400, 'status code is "400"');
-            test.deepEqual(
-                res.body,
-                { errors: {
-                    body: {
-                        name: ['Name must be at least 3 characters long']
-                    }
-                } },
-                'response body contains errors'
-            );
-            test.done();
-        })
-        .done();
-    },
+    queryBasicSuccess: _.partial(testSuccessBasic, get('/query', {
+        qs: { name: 'foo' }
+    })),
 
-    postValidatorsFailureBodyParameterAbsent: function (test) {
-        test.expect(2);
-        post('/basic', {})
-        .then(function (res) {
-            test.strictEqual(res.statusCode, 400, 'status code is "400"');
-            test.deepEqual(
-                res.body,
-                { errors: {
-                    body: {
-                        name: [
-                            'Name is required',
-                            'Name must be at least 3 characters long'
-                        ]
-                    }
-                } },
-                'response body contains errors'
-            );
-            test.done();
+    bodyBasicFailureValuesInvalid: _.partial(
+        testFailureBasicDataInvalid,
+        'body',
+        post('/body', {
+            body: { name: 'fo' }
         })
-        .done();
-    },
+    ),
 
-    postNestedValidatorsSuccess: function (test) {
-        test.expect(2);
+    queryBasicFailureValuesInvalid: _.partial(
+        testFailureBasicDataInvalid,
+        'query',
+        get('/query', {
+            qs: { name: 'fo' }
+        })
+    ),
+
+    bodyBasicFailureValuesAbsent: _.partial(
+        testFailureBasicDataAbsent,
+        'body',
+        post('/body', {})
+    ),
+
+    queryBasicFailureValuesAbsent: _.partial(
+        testFailureBasicDataAbsent,
+        'query',
+        get('/query', {})
+    ),
+
+    bodyNestedSuccess: _.partial(testSuccessNested, post('/nested-body', {
+        body: { object: { name: 'foo' } }
+    })),
+
+    queryNestedSuccess: _.partial(testSuccessNested, get('/nested-query', {
+        qs: { object: { name: 'foo' } }
+    })),
+
+    bodyNestedFailureValuesInvalid: _.partial(
+        testFailureNestedDataInvalid,
+        'body',
         post('/nested-body', {
-            body: {
-                object: {
-                    name: 'foo'
-                }
-            }
+            body: { object: { name: 'fo' } }
         })
-        .then(function (res) {
-            test.strictEqual(res.statusCode, 200, 'status code is "200"');
-            test.strictEqual(
-                res.body.success, true,
-                'success response body'
-            );
-            test.done();
-        })
-        .done();
-    },
+    ),
 
-    postNestedValidatorsFailure: function (test) {
-        test.expect(2);
-        post('/nested-body', {
-            body: {
-                object: {
-                    name: 'fo'
-                }
-            }
+    queryNestedFailureValuesInvalid: _.partial(
+        testFailureNestedDataInvalid,
+        'query',
+        get('/nested-query', {
+            qs: { object: { name: 'fo' } }
         })
-        .then(function (res) {
-            test.strictEqual(res.statusCode, 400, 'status code is "400"');
-            test.deepEqual(
-                res.body,
-                { errors: {
-                    body: { object: {
-                            name: [
-                                'Name must be at least 3 characters long'
-                            ]
-                        }
-                    }
-                } },
-                'response body contains error messages'
-            );
-            test.done();
-        })
-        .done();
-    },
+    ),
 
-    postNestedValidatorsBodyAbsent: function (test) {
-        test.expect(2);
-        post('/nested-body', {
-        })
-        .then(function (res) {
-            test.strictEqual(res.statusCode, 400, 'status code is "400"');
-            test.deepEqual(
-                res.body,
-                { errors: {
-                    body: { object: {
-                            name: [
-                                'Name is required',
-                                'Name must be at least 3 characters long'
-                            ]
-                        }
-                    }
-                } },
-                'response body contains error messages'
-            );
-            test.done();
-        })
-        .done();
-    }
-}
+    bodyNestedFailureValuesAbsent: _.partial(
+        testFailureNestedDataAbsent,
+        'body',
+        post('/nested-body', {})
+    ),
+
+    queryNestedFailureValuesAbsent: _.partial(
+        testFailureNestedDataAbsent,
+        'query',
+        get('/nested-query', {})
+    )
+};
