@@ -1,11 +1,11 @@
 #Express API Validator
 
-Express middleware to declaritively validate incoming requests.
+Express middleware to declaratively validate incoming requests.
 
 `npm install express-api-validator`
 
 ```javascript
-app.post('/basic', requestValidator({
+app.post('/save-user', requestValidator({
         body: {
             username: {
                 validators: ['required', 'minimumLength:3']
