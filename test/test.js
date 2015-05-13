@@ -15,13 +15,31 @@ var routeBasic = function (method, groupName) {
         }
     };
 
-    app[method]('/' + groupName, requestValidator(fig), function (req, res, next) {
-        res.json({ success: true });
-    });
+    app[method](
+        '/' + groupName,
+        requestValidator(fig),
+        function (req, res) {
+            res.json({ success: true });
+        }
+    );
 };
 
 routeBasic('post', 'body');
 routeBasic('get', 'query');
+
+app.put(
+    '/params/:name',
+    requestValidator({
+        params: {
+            name: {
+                validators: ['required', 'minimumLength:3']
+            }
+        }
+    }),
+    function (req, res) {
+        res.json({ success: true });
+    }
+);
 
 var routeNested = function (method, groupName) {
     var fig = {};
@@ -38,7 +56,7 @@ var routeNested = function (method, groupName) {
     app[method](
         '/nested-' + groupName,
         requestValidator(fig),
-        function (req, res, next) {
+        function (req, res) {
             res.json({ success: true });
         }
     );
@@ -72,7 +90,6 @@ var createWrappedRequestMethod = function (method) {
 var get = createWrappedRequestMethod('get');
 var put = createWrappedRequestMethod('put');
 var post = createWrappedRequestMethod('post');
-var del = createWrappedRequestMethod('del');
 
 var isConnected = false;
 
@@ -216,67 +233,61 @@ module.exports = {
         qs: { name: 'foo' }
     })),
 
+    paramsBasicSuccess: _.partial(testSuccessBasic, put('/params/foo')),
+
     bodyBasicFailureValuesInvalid: _.partial(
         testFailureBasicDataInvalid,
         'body',
-        post('/body', {
-            body: { name: 'fo' }
-        })
+        post('/body', { body: { name: 'fo' } })
     ),
 
     queryBasicFailureValuesInvalid: _.partial(
         testFailureBasicDataInvalid,
         'query',
-        get('/query', {
-            qs: { name: 'fo' }
-        })
+        get('/query', { qs: { name: 'fo' } })
+    ),
+
+    paramsBasicFailureValuesInvalid: _.partial(
+        testFailureBasicDataInvalid,
+        'params',
+        put('/params/fo')
     ),
 
     bodyBasicFailureValuesAbsent: _.partial(
-        testFailureBasicDataAbsent,
-        'body',
-        post('/body', {})
+        testFailureBasicDataAbsent, 'body', post('/body')
     ),
 
     queryBasicFailureValuesAbsent: _.partial(
-        testFailureBasicDataAbsent,
-        'query',
-        get('/query', {})
+        testFailureBasicDataAbsent, 'query', get('/query')
     ),
 
-    bodyNestedSuccess: _.partial(testSuccessNested, post('/nested-body', {
-        body: { object: { name: 'foo' } }
-    })),
+    bodyNestedSuccess: _.partial(
+        testSuccessNested,
+        post('/nested-body', { body: { object: { name: 'foo' } } })
+    ),
 
-    queryNestedSuccess: _.partial(testSuccessNested, get('/nested-query', {
-        qs: { object: { name: 'foo' } }
-    })),
+    queryNestedSuccess: _.partial(
+        testSuccessNested,
+        get('/nested-query', { qs: { object: { name: 'foo' } } })
+    ),
 
     bodyNestedFailureValuesInvalid: _.partial(
         testFailureNestedDataInvalid,
         'body',
-        post('/nested-body', {
-            body: { object: { name: 'fo' } }
-        })
+        post('/nested-body', { body: { object: { name: 'fo' } } })
     ),
 
     queryNestedFailureValuesInvalid: _.partial(
         testFailureNestedDataInvalid,
         'query',
-        get('/nested-query', {
-            qs: { object: { name: 'fo' } }
-        })
+        get('/nested-query', { qs: { object: { name: 'fo' } } })
     ),
 
     bodyNestedFailureValuesAbsent: _.partial(
-        testFailureNestedDataAbsent,
-        'body',
-        post('/nested-body', {})
+        testFailureNestedDataAbsent, 'body', post('/nested-body')
     ),
 
     queryNestedFailureValuesAbsent: _.partial(
-        testFailureNestedDataAbsent,
-        'query',
-        get('/nested-query', {})
+        testFailureNestedDataAbsent, 'query', get('/nested-query')
     )
 };
